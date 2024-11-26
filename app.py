@@ -1,11 +1,45 @@
-from flask import Flask, request, render_template, session, redirect, url_for, jsonify
+from flask import Flask, request, render_template, session, redirect, url_for
+import random
+import sqlite3
 
+#intializing our flask app and session secret key
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
+app.secret_key = ('Wordle_Game')
 
-# Define the correct word
-CORRECT_WORD = "flask"
+"""
+1.Connecting to the database
+2.creating a cursor object
+3.creating a table words if it does not exist
+4.Selecting all the words in the db
+5.Storing all the words in form of a list words
+"""
 
+conn = sqlite3.connect("words.db")
+cursor = conn.cursor()
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS Words (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    word TEXT NOT NULL
+)""")
+
+cursor.execute("SELECT word FROM Words")
+words = []
+
+for row in cursor.fetchall():
+    words.append(row[0])
+
+CORRECT_WORD = ""
+def get_new_word():
+    """Selecting a random word from the words list
+    if word is empty, it sets the CORRECT_WORD to flask"""
+    global CORRECT_WORD
+    if words:
+        CORRECT_WORD = random.choice(words)
+    else:
+        CORRECT_WORD = "flask"
+
+
+#initializing the main page for flask
 @app.route('/', methods=['GET', 'POST'])
 def wordle():
     if 'game_state' not in session:
@@ -56,10 +90,19 @@ def wordle():
 
     return render_template('wordle.html', game_state=game_state)
 
+"""
+1.Getting new word
+2.removing the game state from the session 
+3.redirecting to the main game page
+"""
 @app.route('/reset')
 def reset():
+    get_new_word()
     session.pop('game_state', None)
     return redirect(url_for('wordle'))
 
+
 if __name__ == '__main__':
+#getting a new word at start of the game
+    get_new_word()
     app.run(debug=True)
